@@ -1,5 +1,5 @@
 import requests
-
+print("temperatur.py = True")
 API_KEY = "809d645cd50c43a4b0c101505240611"
 BASE_URL = "http://api.weatherapi.com/v1/current.json"
 
@@ -22,3 +22,4 @@ def get_weather(city_name="babol"):
             return None
     except Exception:
         return None
+

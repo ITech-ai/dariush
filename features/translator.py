@@ -1,4 +1,5 @@
 from deep_translator import GoogleTranslator
+print("translator.py = True")
 def transletor(text , trans ="en"):
     if trans =="en":
         translated = GoogleTranslator(source='fa',target='en').translate(text)

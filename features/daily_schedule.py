@@ -1,103 +1,81 @@
+import os
 import json
+import webview
+import sys
+from datetime import datetime, timedelta
 
-FILE_PATH = "features/schedul.json"
+print("daily_schudule.py = True")
+class TaskManagerAPI:
+    def __init__(self):
+        self.file_path = "features/schedul.json"
+        self.check_and_reset_friday_tasks()
 
+    def load_tasks(self):
+        try:
+            with open(self.file_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading JSON: {e}")
+            return {"weekly_tasks": [], "last_reset": ""}
 
-def _reindex_tasks(day_entry):
-    for index, task in enumerate(day_entry["tasks"], start=1):
-        task["id"] = index
+    def save_tasks(self, tasks_data):
+        try:
+            with open(self.file_path, "w", encoding="utf-8") as f:
+                json.dump(tasks_data, f, indent=4, ensure_ascii=False)
+            return True
+        except Exception as e:
+            print(f"Error saving JSON: {e}")
+            return False
 
+    def check_and_reset_friday_tasks(self):
+        """Calculates if a Friday midnight cycle has passed since the last reset."""
+        if not os.path.exists(self.file_path):
+            return
 
-def read_schedule(day):
-    day_lower = day.lower().strip()
+        data = self.load_tasks()
+        last_reset_str = data.get("last_reset", "")
+        now = datetime.now()
 
-    with open(FILE_PATH, "r", encoding="utf-8") as file:
-        data = json.load(file)
- 
-    for day_entry in data["weekly_tasks"]:
-        if day_entry["day"].lower() == day_lower:
-            if not day_entry["tasks"]:
-                return "No tasks"
+        # Target the most recent or upcoming Friday deadline
+        # now.weekday() -> Monday is 0, Friday is 4
+        days_since_friday = (now.weekday() - 4) % 7
+        most_recent_friday = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days_since_friday)
+
+        try:
+            last_reset_date = datetime.strptime(last_reset_str, "%Y-%m-%d")
+        except (ValueError, TypeError):
+            # If no valid reset date exists, establish one without resetting yet
+            data["last_reset"] = most_recent_friday.strftime("%Y-%m-%d")
+            self.save_tasks(data)
+            return
+
+        # If the last recorded reset was BEFORE the most recent Friday midnight checkpoint
+        if last_reset_date < most_recent_friday:
+            print("System Event: Friday Midnight Purge Triggered. Resetting status metrics...")
             
-            lines = []
-            for task in day_entry["tasks"]:
-                lines.append(f"id{task['id']} {task['title']} {task['priority']}")
-            
-            return "\n".join(lines)
-            
-    return None
+            # Loop through every day and uncheck completed targets
+            for day_entry in data.get("weekly_tasks", []):
+                for task in day_entry.get("tasks", []):
+                    task["completed"] = False
 
+            # Lock in the new reset completion marker
+            data["last_reset"] = most_recent_friday.strftime("%Y-%m-%d")
+            self.save_tasks(data)
 
-def write_schedule(day, task_title, task_priority="Medium"):
-    day_lower = day.lower().strip()
+def schudel__main():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = os.path.dirname(script_dir) 
+    html_path = os.path.join(root_dir, 'UI', 'schudel.html') 
 
-    with open(FILE_PATH, "r", encoding="utf-8") as file:
-        data = json.load(file)
+    api = TaskManagerAPI()
 
-    found = False
-    for day_entry in data["weekly_tasks"]:
-        if day_entry["day"].lower() == day_lower:
-            found = True
-            
-            for task in day_entry["tasks"]:
-                if task["title"].lower().strip() == task_title.lower().strip():
-                    return None
+    schedule_window = webview.create_window(
+        title='DARIUSH - Matrix Controller',
+        url=html_path,
+        js_api=api,
+        width=1000,
+        height=680,
+        resizable=True,
+        background_color='#1e1d1a'
+    )
 
-            new_task = {
-                "id": 0,
-                "title": task_title,
-                "priority": task_priority,
-                "completed": False
-            }
-            day_entry["tasks"].append(new_task)
-            _reindex_tasks(day_entry)
-            
-            added_task = day_entry["tasks"][-1]
-            result = f"id{added_task['id']} {added_task['title']} {added_task['priority']}"
-            break
-
-    if found:
-        with open(FILE_PATH, "w", encoding="utf-8") as file:
-            json.dump(data, file, indent=4, ensure_ascii=False)
-        return result
-    
-    return None
-
-
-def delete_schedule(day, task_id=None, task_title=None):
-    if task_id is None and task_title is None:
-        return None
-
-    day_lower = day.lower().strip()
-
-    with open(FILE_PATH, "r", encoding="utf-8") as file:
-        data = json.load(file)
-
-    day_found = False
-    task_removed = False
-    result = None
-
-    for day_entry in data["weekly_tasks"]:
-        if day_entry["day"].lower() == day_lower:
-            day_found = True
-            
-            for task in day_entry["tasks"]:
-                if (task_id is not None and task["id"] == task_id) or \
-                   (task_title is not None and task["title"].lower().strip() == task_title.lower().strip()):
-                    
-                    result = f"id{task['id']} {task['title']} {task['priority']}"
-                    
-                    day_entry["tasks"].remove(task)
-                    task_removed = True
-                    break
-            
-            if task_removed:
-                _reindex_tasks(day_entry)
-            break
-
-    if day_found and task_removed:
-        with open(FILE_PATH, "w", encoding="utf-8") as file:
-            json.dump(data, file, indent=4, ensure_ascii=False)
-        return result
-        
-    return None

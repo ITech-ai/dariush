@@ -1,26 +1,22 @@
 import threading
 import requests
 import psutil
-
-# جلوگیری از کرش در صورت عدم نصب کتابخانه گرافیک روی سیستم‌های مختلف
+print("G_S_I.py = True")
 try:
     import GPUtil
 except ImportError:
     GPUtil = None
 
-# حافظه موقت برای آی‌پی عمومی
 _saved_ip = "Scanning..."
 
 def _fetch_ip_in_background():
     """این تابع در پس‌زمینه اجرا شده و سرعت سیستم را قفل نمی‌کند"""
     global _saved_ip
     try:
-        # درخواست گرفتن آی‌پی با لود غیرهمزمان
         _saved_ip = requests.get("https://api.ipify.org", timeout=3).text
     except Exception:
         _saved_ip = "OFFLINE / ERROR"
 
-# استارت زدن ترد دریافت آی‌پی بلافاصله پس از اجرای برنامه
 threading.Thread(target=_fetch_ip_in_background, daemon=True).start()
 
 def get_SI():    
@@ -43,7 +39,7 @@ def get_SI():
             "ram": ram,
             "disk": disk,
             "gpu": gpu,
-            "ip": _saved_ip  # استفاده فوری از کش بدون قفل کردن رندر فرانت
+            "ip": _saved_ip  
         }
         return system_data
         

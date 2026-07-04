@@ -1,6 +1,6 @@
 import re
 import requests
-
+print("global_price.py = True")
 def get_price():
     try:
         res = requests.get("https://www.tgju.org/", timeout=5)
