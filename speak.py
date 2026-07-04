@@ -1,14 +1,13 @@
 import pyttsx3
-
+import time
+print("speak.py = True")
 def speak(text):
     engine = pyttsx3.init()
 
-    engine.setProperty("rate", 170)
-    engine.setProperty("volume", 1.0)
-
-    print("Jarvis:", text)
-
+    engine.setProperty("rate" , 160)
+    engine.setProperty("volume" , 1.0)
+    
     engine.say(text)
+    
     engine.runAndWait()
-
     engine.stop()
