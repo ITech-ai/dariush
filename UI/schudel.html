@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DARIUSH - Schedule System</title>
+    <style>
+        :root {
+            /* Palette adapted from Screenshot 2026-07-03 234428.jpg */
+            --bg-gradient-start: #171716;
+            --bg-gradient-end: #111110;
+            --panel-bg: rgba(45, 43, 39, 0.45);
+            --panel-border: rgba(230, 184, 0, 0.25);
+            --accent-yellow: #e6b800;
+            --accent-yellow-glow: rgba(230, 184, 0, 0.15);
+            --text-main: #e0deda;
+            --text-muted: #8c877e;
+            --input-bg: #161513;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background: radial-gradient(circle at center, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            color: var(--text-main);
+            padding: 35px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Top Day Navigation Bar */
+        .day-navigator {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 15px 25px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(5px);
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: 1px solid var(--accent-yellow);
+            color: var(--accent-yellow);
+            font-size: 1rem;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: grid;
+            place-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .nav-btn:hover {
+            background: var(--accent-yellow);
+            color: var(--input-bg);
+            box-shadow: 0 0 10px var(--accent-yellow);
+        }
+
+        .current-day-display {
+            font-size: 1.3rem;
+            font-weight: bold;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--accent-yellow);
+            display: flex;
+            align-items: center;
+        }
+
+        .current-day-display::before {
+            content: "●";
+            font-size: 0.75rem;
+            color: var(--accent-yellow);
+            margin-right: 10px;
+        }
+
+        /* Main Workspace Panel */
+        .workspace {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 25px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: inset 0 0 25px rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
+        }
+
+        .task-list {
+            list-style: none;
+            overflow-y: auto;
+            flex-grow: 1;
+            padding-right: 8px;
+            margin-bottom: 20px;
+        }
+
+        /* Matrix row layout style */
+        .task-item {
+            border-bottom: 1px solid rgba(140, 135, 126, 0.15);
+            padding: 15px 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(2px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .task-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-grow: 1;
+        }
+
+        .task-checkbox {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 1px solid var(--accent-yellow);
+            border-radius: 3px;
+            cursor: pointer;
+            display: grid;
+            place-content: center;
+        }
+
+        .task-checkbox:checked {
+            background: var(--accent-yellow);
+        }
+
+        .task-checkbox:checked::before {
+            content: "✓";
+            color: #000;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .task-text {
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+            line-height: 1.4;
+        }
+
+        /* Completed formatting styling */
+        .task-item.completed .task-text {
+            color: var(--accent-yellow);
+            opacity: 0.45;
+        }
+
+        .task-item.completed::after {
+            content: "[COMPLETED]";
+            font-size: 0.75rem;
+            color: var(--accent-yellow);
+            letter-spacing: 1px;
+            opacity: 0.6;
+            margin-right: 20px;
+            white-space: nowrap;
+        }
+
+        .delete-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 60, 60, 0.3);
+            color: #ff5555;
+            padding: 4px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .delete-btn:hover {
+            background: #ff5555;
+            color: #fff;
+            box-shadow: 0 0 8px rgba(255, 85, 85, 0.3);
+        }
+
+        .empty-state {
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: 60px;
+            font-size: 0.85rem;
+            letter-spacing: 1.5px;
+        }
+
+        /* Pill Capsule entry bar from design file */
+        .entry-zone {
+            background: var(--input-bg);
+            border: 1px solid rgba(230, 184, 0, 0.25);
+            border-radius: 25px;
+            padding: 5px 6px 5px 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .entry-zone input {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 0.95rem;
+            letter-spacing: 1px;
+            padding: 10px 0;
+        }
+
+        .entry-zone input:focus {
+            outline: none;
+        }
+
+        .entry-zone input::placeholder {
+            color: var(--text-muted);
+            opacity: 0.5;
+        }
+
+        /* Exact rounded yellow action trigger button */
+        .add-btn {
+            background: var(--accent-yellow);
+            color: var(--input-bg);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: grid;
+            place-content: center;
+            transition: transform 0.15s;
+        }
+
+        .add-btn:hover {
+            transform: scale(1.05);
+            background-color: #ffdd44;
+        }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(140, 135, 126, 0.25); border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-yellow); }
+    </style>
+</head>
+<body>
+
+    <div class="day-navigator">
+        <button class="nav-btn" onclick="navigateDay(-1)">◀</button>
+        <div class="current-day-display" id="dayDisplay">SATURDAY</div>
+        <button class="nav-btn" onclick="navigateDay(1)">▶</button>
+    </div>
+
+    <div class="workspace">
+        <ul class="task-list" id="taskList"></ul>
+
+        <div class="entry-zone">
+            <input type="text" id="newTaskInput" placeholder="Initialize execution task...">
+            <button class="add-btn" onclick="addNewTask()">➔</button>
+        </div>
+    </div>
+
+    <script>
+        let taskDataStructure = { weekly_tasks: [] };
+        let currentDayIndex = 0;
+
+        window.addEventListener('pywebviewready', function() {
+            initApp();
+        });
+
+        async function initApp() {
+            taskDataStructure = await window.pywebview.api.load_tasks();
+            
+            // Map OS current day to structure index dynamically
+            const todayName = new Date().toLocaleString('en-US', { weekday: 'long' });
+            const matchingIndex = taskDataStructure.weekly_tasks.findIndex(d => d.day.toLowerCase() === todayName.toLowerCase());
+            if (matchingIndex !== -1) {
+                currentDayIndex = matchingIndex;
+            }
+            
+            updateUI();
+        }
+
+        function getCurrentDayObject() {
+            return taskDataStructure.weekly_tasks[currentDayIndex];
+        }
+
+        function navigateDay(direction) {
+            const totalDays = taskDataStructure.weekly_tasks.length;
+            if (totalDays === 0) return;
+            currentDayIndex = (currentDayIndex + direction + totalDays) % totalDays;
+            updateUI();
+        }
+
+        function updateUI() {
+            const dayObj = getCurrentDayObject();
+            if (!dayObj) return;
+
+            document.getElementById('dayDisplay').innerText = dayObj.day.toUpperCase();
+            renderTasks(dayObj.tasks);
+        }
+
+        function renderTasks(tasks) {
+            const listContainer = document.getElementById('taskList');
+            listContainer.innerHTML = '';
+
+            if (!tasks || tasks.length === 0) {
+                listContainer.innerHTML = `<div class="empty-state">// NO ACTIVE DIRECTIVES ON THIS CYCLE</div>`;
+                return;
+            }
+
+            tasks.forEach(task => {
+                const li = document.createElement('li');
+                li.className = `task-item ${task.completed ? 'completed' : ''}`;
+                
+                li.innerHTML = `
+                    <div class="task-left">
+                        <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask(${task.id})">
+                        <span class="task-text">${task.title}</span>
+                    </div>
+                    <button class="delete-btn" onclick="deleteTask(${task.id})">PURGE</button>
+                `;
+                listContainer.appendChild(li);
+            });
+        }
+
+        async function addNewTask() {
+            const input = document.getElementById('newTaskInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const dayObj = getCurrentDayObject();
+            if (!dayObj) return;
+
+            const newTask = {
+                id: Date.now(),
+                title: text,
+                priority: "Medium",
+                completed: false
+            };
+
+            dayObj.tasks.push(newTask);
+            input.value = '';
+            updateUI();
+            await window.pywebview.api.save_tasks(taskDataStructure);
+        }
+
+        async function toggleTask(id) {
+            const dayObj = getCurrentDayObject();
+            if (!dayObj) return;
+
+            dayObj.tasks = dayObj.tasks.map(task => {
+                if (task.id === id) task.completed = !task.completed;
+                return task;
+            });
+            updateUI();
+            await window.pywebview.api.save_tasks(taskDataStructure);
+        }
+
+        async function deleteTask(id) {
+            const dayObj = getCurrentDayObject();
+            if (!dayObj) return;
+
+            dayObj.tasks = dayObj.tasks.filter(task => task.id !== id);
+            updateUI();
+            await window.pywebview.api.save_tasks(taskDataStructure);
+        }
+
+        document.getElementById('newTaskInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addNewTask();
+        });
+    </script>
+</body>
+</html>
